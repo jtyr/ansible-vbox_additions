@@ -1,0 +1,108 @@
+---
+
+- name: Get kernel version
+  shell: "rpm -q kernel | sort | tail -n1 | grep -Po '(?<=kernel-).*'"
+  changed_when: false
+  register: vbox_additions_kernel_version
+  tags:
+    - vbox_additions_check
+
+- name: Check if Additions are already installed in the right version
+  shell: >
+    test -f /lib/modules/{{ vbox_additions_kernel_version.stdout }}/misc/vboxvideo.ko &&
+    source /var/lib/VBoxGuestAdditions/config &&
+    [[ "{{ vbox_additions_version }}" == "$INSTALL_VER" ]]
+  changed_when: false
+  failed_when: false
+  register: vbox_additions_installed
+  when: not vbox_additions_build_force
+  tags:
+    - vbox_additions_check
+
+- name: Download ISO
+  get_url:
+    url: "{{ vbox_additions_iso_url }}"
+    dest: "{{ vbox_additions_iso_path }}"
+  when: >
+    vbox_additions_iso_local | length == 0 and
+    (
+        vbox_additions_installed.rc != 0 or
+        vbox_additions_build_force
+    )
+  tags:
+    - vbox_additions_iso
+
+- name: Copy ISO
+  copy:
+    src: "{{ vbox_additions_iso_local }}"
+    dest: /tmp/VBoxGuestAdditions_{{ vbox_additions_version }}.iso
+  when: >
+    vbox_additions_iso_local | length > 0 and
+    (
+        vbox_additions_installed.rc != 0 or
+        vbox_additions_build_force
+    )
+  tags:
+    - vbox_additions_iso
+
+- name: Mount ISO
+  mount:
+    name: /mnt
+    src: /tmp/VBoxGuestAdditions_{{ vbox_additions_version }}.iso
+    fstype: iso9660
+    opts: loop
+    state: mounted
+  when: >
+    vbox_additions_installed.rc != 0 or
+    vbox_additions_build_force
+  tags:
+    - vbox_additions_iso
+
+- name: Install build dependencies
+  package:
+    name: "{{ (item + '-' + vbox_additions_kernel_version.stdout) if item == 'kernel-devel' else item }}"
+  with_items: "{{ vbox_additions_build_deps }}"
+  when: >
+    vbox_additions_installed.rc != 0 or
+    vbox_additions_build_force
+  tags:
+    - vbox_additions_pkg
+
+- name: Build modules
+  shell: KERN_DIR=/usr/src/kernels/{{ vbox_additions_kernel_version.stdout }} /mnt/VBoxLinuxAdditions.run
+  when: >
+    vbox_additions_build_force or
+    vbox_additions_installed.rc != 0
+  register: vbox_additions_build_result
+  failed_when: (false if vbox_additions_build_ignore_errors else (vbox_additions_build_result.rc != 0))
+  tags:
+    - vbox_additions_build
+
+- name: Umount ISO
+  mount:
+    name: /mnt
+    src: /tmp/VBoxGuestAdditions_{{ vbox_additions_version }}.iso
+    fstype: iso9660
+    state: unmounted
+  tags:
+    - vbox_additions_iso
+
+- name: Remove ISO
+  file:
+    path: "{{ vbox_additions_iso_path }}"
+    state: absent
+  when: >
+    vbox_additions_iso_remove
+  tags:
+    - vbox_additions_iso
+
+- name: Uninstall build dependencies
+  package:
+    name: "{{ item }}"
+    state: absent
+  when: >
+    vbox_additions_build_deps_uninstall and
+    item != "kernel"
+  with_items: "{{ vbox_additions_build_deps }}"
+  tags:
+    - vbox_additions_pkg
