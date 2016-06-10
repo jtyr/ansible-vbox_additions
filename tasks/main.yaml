@@ -1,9 +1,9 @@
 ---
 
 - name: Get kernel version
-  shell: "rpm -q kernel | sort | tail -n1 | grep -Po '(?<=kernel-).*'"
-  changed_when: false
+  shell: "env rpm -q kernel | sort | tail -n1 | grep -Po '(?<=kernel-).*'"
   register: vbox_additions_kernel_version
+  changed_when: false
   tags:
     - vbox_additions_check
 
@@ -12,10 +12,10 @@
     test -f /lib/modules/{{ vbox_additions_kernel_version.stdout }}/misc/vboxvideo.ko &&
     source /var/lib/VBoxGuestAdditions/config &&
     [[ "{{ vbox_additions_version }}" == "$INSTALL_VER" ]]
-  changed_when: false
-  failed_when: false
   register: vbox_additions_installed
   when: not vbox_additions_build_force
+  changed_when: false
+  failed_when: false
   tags:
     - vbox_additions_check
 
@@ -61,19 +61,19 @@
 - name: Install build dependencies
   package:
     name: "{{ (item + '-' + vbox_additions_kernel_version.stdout) if item == 'kernel-devel' else item }}"
-  with_items: "{{ vbox_additions_build_deps }}"
   when: >
     vbox_additions_installed.rc != 0 or
     vbox_additions_build_force
+  with_items: "{{ vbox_additions_build_deps }}"
   tags:
     - vbox_additions_pkg
 
 - name: Build modules
   shell: KERN_DIR=/usr/src/kernels/{{ vbox_additions_kernel_version.stdout }} /mnt/VBoxLinuxAdditions.run
+  register: vbox_additions_build_result
   when: >
     vbox_additions_build_force or
     vbox_additions_installed.rc != 0
-  register: vbox_additions_build_result
   failed_when: (false if vbox_additions_build_ignore_errors else (vbox_additions_build_result.rc != 0))
   tags:
     - vbox_additions_build
