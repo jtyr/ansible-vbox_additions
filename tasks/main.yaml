@@ -1,7 +1,7 @@
 ---
 
 - name: Get kernel version
-  shell: "env rpm -q kernel | sort | tail -n1 | grep -Po '(?<=kernel-).*'"
+  shell: "uname -r"
   register: vbox_additions_kernel_version
   changed_when: false
   tags:
@@ -26,8 +26,11 @@
   when: >
     vbox_additions_iso_local | length == 0 and
     (
-        vbox_additions_installed.rc != 0 or
-        vbox_additions_build_force
+      (
+        vbox_additions_installed is defined and
+        vbox_additions_installed.rc != 0
+      ) or
+      vbox_additions_build_force
     )
   tags:
     - vbox_additions_iso
@@ -39,8 +42,11 @@
   when: >
     vbox_additions_iso_local | length > 0 and
     (
-        vbox_additions_installed.rc != 0 or
-        vbox_additions_build_force
+      (
+        vbox_additions_installed.rc is defined and
+        vbox_additions_installed.rc != 0
+      ) or
+      vbox_additions_build_force
     )
   tags:
     - vbox_additions_iso
@@ -48,7 +54,10 @@
 - name: Mount ISO
   shell: env mount /tmp/VBoxGuestAdditions_{{ vbox_additions_version }}.iso /mnt -t iso9660 -o loop
   when: >
-    vbox_additions_installed.rc != 0 or
+    (
+      vbox_additions_installed.rc is defined and
+      vbox_additions_installed.rc != 0
+    ) or
     vbox_additions_build_force
   tags:
     - vbox_additions_iso
@@ -57,7 +66,10 @@
   package:
     name: "{{ (item + '-' + vbox_additions_kernel_version.stdout) if item == 'kernel-devel' else item }}"
   when: >
-    vbox_additions_installed.rc != 0 or
+    (
+      vbox_additions_installed.rc is defined and
+      vbox_additions_installed.rc != 0
+    ) or
     vbox_additions_build_force
   with_items: "{{ vbox_additions_build_deps }}"
   tags:
@@ -67,8 +79,11 @@
   shell: KERN_DIR=/usr/src/kernels/{{ vbox_additions_kernel_version.stdout }} /mnt/VBoxLinuxAdditions.run
   register: vbox_additions_build_result
   when: >
-    vbox_additions_build_force or
-    vbox_additions_installed.rc != 0
+    (
+      vbox_additions_installed.rc is defined and
+      vbox_additions_installed.rc != 0
+    ) or
+    vbox_additions_build_force
   failed_when: (false if vbox_additions_build_ignore_errors else (vbox_additions_build_result.rc != 0))
   tags:
     - vbox_additions_build
