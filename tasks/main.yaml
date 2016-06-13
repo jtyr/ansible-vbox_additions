@@ -46,12 +46,7 @@
     - vbox_additions_iso
 
 - name: Mount ISO
-  mount:
-    name: /mnt
-    src: /tmp/VBoxGuestAdditions_{{ vbox_additions_version }}.iso
-    fstype: iso9660
-    opts: loop
-    state: mounted
+  shell: env mount /tmp/VBoxGuestAdditions_{{ vbox_additions_version }}.iso /mnt -t iso9660 -o loop
   when: >
     vbox_additions_installed.rc != 0 or
     vbox_additions_build_force
