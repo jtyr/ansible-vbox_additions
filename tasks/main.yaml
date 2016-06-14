@@ -106,11 +106,22 @@
   tags:
     - vbox_additions_iso
 
-- name: Uninstall build dependencies
+- name: Uninstall build dependencies (RedHat)
+  shell: env yum remove --assumeyes --setopt=clean_requirements_on_remove=1 {{ item }}
+  when: >
+    ansible_os_family == "RedHat" and
+    vbox_additions_build_deps_uninstall and
+    item != "kernel"
+  with_items: "{{ vbox_additions_build_deps }}"
+  tags:
+    - vbox_additions_pkg
+
+- name: Uninstall build dependencies (Other)
   package:
     name: "{{ item }}"
     state: absent
   when: >
+    ansible_os_family != "RedHat" and
     vbox_additions_build_deps_uninstall and
     item != "kernel"
   with_items: "{{ vbox_additions_build_deps }}"
