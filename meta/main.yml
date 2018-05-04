@@ -4,11 +4,11 @@ galaxy_info:
   author: Jiri Tyr
   description: Role that helps to install VirtualBox Additions
   license: MIT
-  min_ansible_version: 2.0
+  min_ansible_version: 2.4
   platforms:
     - name: EL
       versions:
         - all
-  categories:
+  galaxy_tags:
     - system
 dependencies: []

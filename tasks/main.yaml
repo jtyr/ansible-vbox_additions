@@ -19,111 +19,88 @@
   tags:
     - vbox_additions_check
 
-- name: Download ISO
-  get_url:
-    url: "{{ vbox_additions_iso_url }}"
-    dest: "{{ vbox_additions_iso_path }}"
-  when: >
-    vbox_additions_iso_local | length == 0 and
-    (
-      (
-        vbox_additions_installed is defined and
-        vbox_additions_installed.rc != 0
-      ) or
-      vbox_additions_build_force
-    )
-  tags:
-    - vbox_additions_iso
+- block:
 
-- name: Copy ISO
-  copy:
-    src: "{{ vbox_additions_iso_local }}"
-    dest: /tmp/VBoxGuestAdditions_{{ vbox_additions_version }}.iso
-  when: >
-    vbox_additions_iso_local | length > 0 and
-    (
-      (
-        vbox_additions_installed.rc is defined and
-        vbox_additions_installed.rc != 0
-      ) or
-      vbox_additions_build_force
-    )
-  tags:
-    - vbox_additions_iso
+  - name: Download ISO
+    get_url:
+      url: "{{ vbox_additions_iso_url }}"
+      dest: "{{ vbox_additions_iso_path }}"
+    when: >
+      vbox_additions_iso_local | length == 0
+    tags:
+      - vbox_additions_iso
 
-- name: Mount ISO
-  shell: env mount /tmp/VBoxGuestAdditions_{{ vbox_additions_version }}.iso /mnt -t iso9660 -o loop
+  - name: Copy ISO
+    copy:
+      src: "{{ vbox_additions_iso_local }}"
+      dest: /tmp/VBoxGuestAdditions_{{ vbox_additions_version }}.iso
+    when: >
+      vbox_additions_iso_local | length > 0
+    tags:
+      - vbox_additions_iso
+
+  - name: Mount ISO
+    shell: env mount /tmp/VBoxGuestAdditions_{{ vbox_additions_version }}.iso /mnt -t iso9660 -o loop
+    tags:
+      - vbox_additions_iso
+
+  - name: Install build dependencies
+    package:
+      name: "{{ (item + '-' + vbox_additions_kernel_version.stdout) if item == 'kernel-devel' else item }}"
+    with_items: "{{ vbox_additions_build_deps }}"
+    tags:
+      - vbox_additions_pkg
+
+  - name: Build modules
+    shell: KERN_DIR=/usr/src/kernels/{{ vbox_additions_kernel_version.stdout }} /mnt/VBoxLinuxAdditions.run
+    register: vbox_additions_build_result
+    failed_when: (false if vbox_additions_build_ignore_errors else (vbox_additions_build_result.rc != 0))
+    tags:
+      - vbox_additions_build
+
+  - name: Umount ISO
+    mount:
+      name: /mnt
+      src: /tmp/VBoxGuestAdditions_{{ vbox_additions_version }}.iso
+      fstype: iso9660
+      state: unmounted
+    tags:
+      - vbox_additions_iso
+
+  - name: Remove ISO
+    file:
+      path: "{{ vbox_additions_iso_path }}"
+      state: absent
+    when: >
+      vbox_additions_iso_remove
+    tags:
+      - vbox_additions_iso
+
+  - name: Uninstall build dependencies (RedHat)
+    shell: env yum remove --assumeyes --setopt=clean_requirements_on_remove=1 {{ item }}
+    when: >
+      ansible_os_family == "RedHat" and
+      vbox_additions_build_deps_uninstall and
+      item != "kernel"
+    with_items: "{{ vbox_additions_build_deps }}"
+    tags:
+      - vbox_additions_pkg
+
+  - name: Uninstall build dependencies (Other)
+    package:
+      name: "{{ item }}"
+      state: absent
+    when: >
+      ansible_os_family != "RedHat" and
+      vbox_additions_build_deps_uninstall and
+      item != "kernel"
+    with_items: "{{ vbox_additions_build_deps }}"
+    tags:
+      - vbox_additions_pkg
+
   when: >
     (
-      vbox_additions_installed.rc is defined and
+      vbox_additions_installed is defined and
       vbox_additions_installed.rc != 0
     ) or
     vbox_additions_build_force
-  tags:
-    - vbox_additions_iso
-
-- name: Install build dependencies
-  package:
-    name: "{{ (item + '-' + vbox_additions_kernel_version.stdout) if item == 'kernel-devel' else item }}"
-  when: >
-    (
-      vbox_additions_installed.rc is defined and
-      vbox_additions_installed.rc != 0
-    ) or
-    vbox_additions_build_force
-  with_items: "{{ vbox_additions_build_deps }}"
-  tags:
-    - vbox_additions_pkg
-
-- name: Build modules
-  shell: KERN_DIR=/usr/src/kernels/{{ vbox_additions_kernel_version.stdout }} /mnt/VBoxLinuxAdditions.run
-  register: vbox_additions_build_result
-  when: >
-    (
-      vbox_additions_installed.rc is defined and
-      vbox_additions_installed.rc != 0
-    ) or
-    vbox_additions_build_force
-  failed_when: (false if vbox_additions_build_ignore_errors else (vbox_additions_build_result.rc != 0))
-  tags:
-    - vbox_additions_build
-
-- name: Umount ISO
-  mount:
-    name: /mnt
-    src: /tmp/VBoxGuestAdditions_{{ vbox_additions_version }}.iso
-    fstype: iso9660
-    state: unmounted
-  tags:
-    - vbox_additions_iso
-
-- name: Remove ISO
-  file:
-    path: "{{ vbox_additions_iso_path }}"
-    state: absent
-  when: >
-    vbox_additions_iso_remove
-  tags:
-    - vbox_additions_iso
-
-- name: Uninstall build dependencies (RedHat)
-  shell: env yum remove --assumeyes --setopt=clean_requirements_on_remove=1 {{ item }}
-  when: >
-    ansible_os_family == "RedHat" and
-    vbox_additions_build_deps_uninstall and
-    item != "kernel"
-  with_items: "{{ vbox_additions_build_deps }}"
-  tags:
-    - vbox_additions_pkg
-
-- name: Uninstall build dependencies (Other)
-  package:
-    name: "{{ item }}"
-    state: absent
-  when: >
-    ansible_os_family != "RedHat" and
-    vbox_additions_build_deps_uninstall and
-    item != "kernel"
-  with_items: "{{ vbox_additions_build_deps }}"
-  tags:
-    - vbox_additions_pkg
