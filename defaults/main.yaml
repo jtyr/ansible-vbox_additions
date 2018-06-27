@@ -21,7 +21,6 @@ vbox_additions_build_deps:
   - gcc
   - kernel-devel
   - bzip2
-  - perl
 
 # Whether to force the build even if modules exist
 vbox_additions_build_force: no
