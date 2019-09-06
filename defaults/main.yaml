@@ -1,14 +1,14 @@
 ---
 
 # Additions version
-vbox_additions_version: 5.2.12
+vbox_additions_version: 6.0.12
 
 # Path to locally downloaded ISO image
 # (if specified, no ISO will be downloded from the web)
 vbox_additions_iso_local: ""
 
 # Where to downlod the ISO
-vbox_additions_iso_url: http://download.virtualbox.org/virtualbox/{{ vbox_additions_version }}/VBoxGuestAdditions_{{ vbox_additions_version }}.iso
+vbox_additions_iso_url: https://download.virtualbox.org/virtualbox/{{ vbox_additions_version }}/VBoxGuestAdditions_{{ vbox_additions_version }}.iso
 
 # Where to store the ISO
 vbox_additions_iso_path: /tmp/VBoxGuestAdditions_{{ vbox_additions_version }}.iso
