@@ -9,7 +9,7 @@
 
 - name: Check if Additions are already installed in the right version
   shell: >
-    test -f /lib/modules/{{ vbox_additions_kernel_version.stdout }}/misc/vboxvideo.ko &&
+    test -f /lib/modules/{{ vbox_additions_kernel_version.stdout }}/misc/vboxguest.ko &&
     source /var/lib/VBoxGuestAdditions/config &&
     [[ "{{ vbox_additions_version }}" == "$INSTALL_VER" ]]
   register: vbox_additions_installed
