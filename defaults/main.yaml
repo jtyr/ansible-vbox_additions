@@ -18,9 +18,12 @@ vbox_additions_iso_remove: yes
 
 # Build dependencies
 vbox_additions_build_deps:
+  - bzip2
+  - elfutils-libelf-devel
   - gcc
   - kernel-devel
-  - bzip2
+  - make
+  - tar
 
 # Whether to force the build even if modules exist
 vbox_additions_build_force: no
