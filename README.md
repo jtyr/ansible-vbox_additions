@@ -81,8 +81,11 @@ vbox_additions_build_force: no
 # Whether to force the build even if modules exist
 vbox_additions_build_ignore_errors: no
 
-# Whether to uninstall the build dependencies once finished
-vbox_additions_build_deps_uninstall: yes
+# List of packages which get uninstalled once finished
+vbox_additions_build_deps_uninstall:
+  - elfutils-libelf-devel
+  - gcc
+  - kernel-devel
 ```
 
 
