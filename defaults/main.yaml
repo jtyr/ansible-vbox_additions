@@ -1,7 +1,7 @@
 ---
 
 # Additions version
-vbox_additions_version: 6.0.12
+vbox_additions_version: 6.1.2
 
 # Path to locally downloaded ISO image
 # (if specified, no ISO will be downloded from the web)
